@@ -47,6 +47,7 @@ func readJson(http *http.Response) (*getScopesResponse, error) {
 }
 
 func TestBewit(t *testing.T) {
+	checkTest(t)
 	url := fmt.Sprintf("https://auth.taskcluster.net/v1/client/%s/scopes", CLIENT_ID)
 
 	bewitUrl, err := tc.Bewit(CLIENT_ID, ACCESS_TOKEN, url)
