@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	tc "github.com/lightsofapollo/taskcluster-proxy/taskcluster"
+	tc "github.com/taskcluster/taskcluster-proxy/taskcluster"
 )
 
 var CLIENT_ID = os.Getenv("TASKCLUSTER_CLIENT_ID")
