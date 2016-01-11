@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/taskcluster/taskcluster-client-go/tcclient"
 	tc "github.com/taskcluster/taskcluster-proxy/taskcluster"
 )
 
@@ -29,6 +31,25 @@ var tcServices = tc.NewServices()
 var httpClient = &http.Client{}
 
 func (self Routes) signUrl(res http.ResponseWriter, req *http.Request) {
+	// create temp credentials with scopes limited to task
+	// only works if proxy has permanent scopes
+	if self.Certificate != "" {
+		res.WriteHeader(403)
+		fmt.Printf(res, "This worker type runs its taskcluster proxy server with temporary credentials, and therefore forbids bewit requests, since it cannot sign a request valid only for the task's scopes - consider using a different worker type which has permanent credentials for the taskcluster proxy. Such a proxy can generate temporary credentials with restricted scopes and use this for hawk bewit signing.")
+		return
+	}
+	creds := &tcclient.Credentials{
+		ClientId:    self.ClientId,
+		AccessToken: self.AccessToken,
+	}
+	tempCreds, err := creds.CreateTemporaryCredentials(time.Hour*1, self.Scopes...)
+
+	if err != nil {
+		res.WriteHeader(500)
+		fmt.Printf(res, "Could not create temp credentials - no way to proceed")
+		return
+	}
+
 	// Using ReadAll could be sketchy here since we are reading unbounded data
 	// into memory...
 	body, err := ioutil.ReadAll(req.Body)
@@ -40,7 +61,7 @@ func (self Routes) signUrl(res http.ResponseWriter, req *http.Request) {
 	}
 
 	urlString := strings.TrimSpace(string(body))
-	bewitUrl, err := tc.Bewit(self.ClientId, self.AccessToken, self.Certificate, urlString)
+	bewitUrl, err := tc.Bewit(tempCreds.ClientId, tempCreds.AccessToken, tempCreds.Certificate, urlString)
 
 	if err != nil {
 		res.WriteHeader(500)
